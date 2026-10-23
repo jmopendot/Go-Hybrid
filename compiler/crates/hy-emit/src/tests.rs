@@ -2908,3 +2908,48 @@ fn m4_initialism_mapping_for_foreign_go_names_issue_658() {
     assert!(go.contains("strings.ToValidUTF8(\"a\", \"b\")"), "expected strings.ToValidUTF8, got:\n{}", go);
 }
 
+
+#[test]
+fn atomic_scalar_shapes_cover_the_go_member_api() {
+    use super::shapes::{lookup_member, MemberKind};
+
+    let integer_scalars = [
+        "atomic.int32",
+        "atomic.int64",
+        "atomic.uint32",
+        "atomic.uint64",
+        "atomic.uintptr",
+    ];
+    for ty in integer_scalars {
+        for (hy, go) in [
+            ("load", "Load"),
+            ("store", "Store"),
+            ("add", "Add"),
+            ("swap", "Swap"),
+            ("compare_and_swap", "CompareAndSwap"),
+            ("and", "And"),
+            ("or", "Or"),
+        ] {
+            let member = lookup_member(ty, hy)
+                .unwrap_or_else(|| panic!("missing member mapping {ty}.{hy}"));
+            assert_eq!(member.go, go, "wrong Go spelling for {ty}.{hy}");
+            assert_eq!(member.kind, MemberKind::Method, "{ty}.{hy} must be a method");
+        }
+    }
+
+    for (hy, go) in [
+        ("load", "Load"),
+        ("store", "Store"),
+        ("swap", "Swap"),
+        ("compare_and_swap", "CompareAndSwap"),
+    ] {
+        let member = lookup_member("atomic.bool", hy)
+            .unwrap_or_else(|| panic!("missing member mapping atomic.bool.{hy}"));
+        assert_eq!(member.go, go, "wrong Go spelling for atomic.bool.{hy}");
+        assert_eq!(member.kind, MemberKind::Method, "atomic.bool.{hy} must be a method");
+    }
+
+    assert!(lookup_member("atomic.bool", "add").is_none(), "Go atomic.Bool has no Add");
+    assert!(lookup_member("atomic.bool", "and").is_none(), "Go atomic.Bool has no And");
+    assert!(lookup_member("atomic.bool", "or").is_none(), "Go atomic.Bool has no Or");
+}
